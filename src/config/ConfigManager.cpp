@@ -282,6 +282,8 @@ void CConfigManager::setDefaultVars() {
     configValues["gestures:workspace_swipe_forever"].intValue                  = 0;
     configValues["gestures:workspace_swipe_numbered"].intValue                 = 0;
     configValues["gestures:workspace_swipe_use_r"].intValue                    = 0;
+    configValues["gestures:workspace_swipe_touch"].intValue                    = 0;
+
 
     configValues["xwayland:use_nearest_neighbor"].intValue = 1;
     configValues["xwayland:force_zero_scaling"].intValue   = 0;
