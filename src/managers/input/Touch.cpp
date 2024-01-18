@@ -2,6 +2,7 @@
 #include "../../Compositor.hpp"
 
 void CInputManager::onTouchDown(wlr_touch_down_event* e) {
+    static auto* const PSWIPETOUCH = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_touch")->intValue;
     EMIT_HOOK_EVENT_CANCELLABLE("touchDown", e);
 
     auto       PMONITOR = g_pCompositor->getMonitorFromName(e->touch->output_name ? e->touch->output_name : "");
@@ -22,6 +23,16 @@ void CInputManager::onTouchDown(wlr_touch_down_event* e) {
         e.state = WLR_BUTTON_PRESSED;
         g_pInputManager->processMouseDownKill(&e);
         return;
+    }
+
+    if (PSWIPETOUCH) {
+        // TODO: make this based on general:gaps_out instead of hard-coded
+        //const auto x = e->x * PMONITOR->vecSize.x;
+        //const auto y = e->y * PMONITOR->vecSize.y;
+        if (e->x < 0.01 || e->x > 0.99 || e->y < 0.01 || e->y > 0.99) {
+            beginWorkspaceSwipe();
+            return;
+        }
     }
 
     m_bLastInputTouch = true;
@@ -55,6 +66,12 @@ void CInputManager::onTouchDown(wlr_touch_down_event* e) {
 
 void CInputManager::onTouchUp(wlr_touch_up_event* e) {
     EMIT_HOOK_EVENT_CANCELLABLE("touchUp", e);
+    if (m_sActiveSwipe.pWorkspaceBegin) {
+        // If there was a swipe, end it.
+        endWorkspaceSwipe();
+        return;
+    }
+
     if (m_sTouchData.touchFocusSurface) {
         wlr_seat_touch_notify_up(g_pCompositor->m_sSeat.seat, e->time_msec, e->touch_id);
     }
@@ -62,6 +79,11 @@ void CInputManager::onTouchUp(wlr_touch_up_event* e) {
 
 void CInputManager::onTouchMove(wlr_touch_motion_event* e) {
     EMIT_HOOK_EVENT_CANCELLABLE("touchMove", e);
+    if (m_sActiveSwipe.pWorkspaceBegin) {
+        // Handle the workspace swipe if there is one
+        updateWorkspaceSwipe(e->x - m_sActiveSwipe.delta, e->y - m_sActiveSwipe.delta);
+        return;
+    }
     if (m_sTouchData.touchFocusWindow && g_pCompositor->windowValidMapped(m_sTouchData.touchFocusWindow)) {
         const auto PMONITOR = g_pCompositor->getMonitorFromID(m_sTouchData.touchFocusWindow->m_iMonitorID);
 
