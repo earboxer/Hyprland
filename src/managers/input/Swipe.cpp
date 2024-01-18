@@ -43,7 +43,10 @@ void CInputManager::beginWorkspaceSwipe() {
 void CInputManager::onSwipeEnd(wlr_pointer_swipe_end_event* e) {
     if (!m_sActiveSwipe.pWorkspaceBegin)
         return; // no valid swipe
+    endWorkspaceSwipe();
+}
 
+void CInputManager::endWorkspaceSwipe() {
     static auto* const PSWIPEPERC    = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_cancel_ratio")->floatValue;
     static auto* const PSWIPEDIST    = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_distance")->intValue;
     static auto* const PSWIPEFORC    = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_min_speed_to_force")->intValue;
@@ -191,11 +194,17 @@ void CInputManager::onSwipeEnd(wlr_pointer_swipe_end_event* e) {
 }
 
 void CInputManager::onSwipeUpdate(wlr_pointer_swipe_update_event* e) {
+    static auto* const PSWIPEINVR = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_invert")->intValue;
+    const bool         VERTANIMS  = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
+        m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
     if (!m_sActiveSwipe.pWorkspaceBegin)
         return;
 
+    const double delta = m_sActiveSwipe.delta + (VERTANIMS ? (*PSWIPEINVR ? -e->dy : e->dy) : (*PSWIPEINVR ? -e->dx : e->dx));
+    updateWorkspaceSwipe(delta);
+}
+void CInputManager::updateWorkspaceSwipe(double delta) {
     static auto* const PSWIPEDIST             = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_distance")->intValue;
-    static auto* const PSWIPEINVR             = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_invert")->intValue;
     static auto* const PSWIPENEW              = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_create_new")->intValue;
     static auto* const PSWIPEDIRLOCK          = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_direction_lock")->intValue;
     static auto* const PSWIPEDIRLOCKTHRESHOLD = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_direction_lock_threshold")->intValue;
@@ -203,15 +212,15 @@ void CInputManager::onSwipeUpdate(wlr_pointer_swipe_update_event* e) {
     static auto* const PSWIPENUMBER           = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_numbered")->intValue;
     static auto* const PSWIPEUSER             = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_use_r")->intValue;
     static auto* const PWORKSPACEGAP          = &g_pConfigManager->getConfigValuePtr("general:gaps_workspaces")->intValue;
-
-    const auto         XDISTANCE = m_sActiveSwipe.pMonitor->vecSize.x + *PWORKSPACEGAP;
-    const auto         YDISTANCE = m_sActiveSwipe.pMonitor->vecSize.y + *PWORKSPACEGAP;
-    const bool         VERTANIMS = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
+    const bool         VERTANIMS              = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
         m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
 
-    m_sActiveSwipe.delta += VERTANIMS ? (*PSWIPEINVR ? -e->dy : e->dy) : (*PSWIPEINVR ? -e->dx : e->dx);
+    const auto   XDISTANCE = m_sActiveSwipe.pMonitor->vecSize.x + *PWORKSPACEGAP;
+    const auto   YDISTANCE = m_sActiveSwipe.pMonitor->vecSize.y + *PWORKSPACEGAP;
+    const double d         = m_sActiveSwipe.delta - delta;
+    m_sActiveSwipe.delta   = delta;
 
-    m_sActiveSwipe.avgSpeed = (m_sActiveSwipe.avgSpeed * m_sActiveSwipe.speedPoints + abs(e->dx)) / (m_sActiveSwipe.speedPoints + 1);
+    m_sActiveSwipe.avgSpeed = (m_sActiveSwipe.avgSpeed * m_sActiveSwipe.speedPoints + abs(d)) / (m_sActiveSwipe.speedPoints + 1);
     m_sActiveSwipe.speedPoints++;
 
     std::string wsname           = "";

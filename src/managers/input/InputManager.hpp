@@ -228,6 +228,8 @@ class CInputManager {
 
     // swipe
     void beginWorkspaceSwipe();
+    void updateWorkspaceSwipe(double);
+    void endWorkspaceSwipe();
 
     void setBorderCursorIcon(eBorderIconDirection);
     void setCursorIconOnBorder(CWindow* w);
