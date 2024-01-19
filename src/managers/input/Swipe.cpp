@@ -196,9 +196,13 @@ void CInputManager::endWorkspaceSwipe() {
 void CInputManager::onSwipeUpdate(wlr_pointer_swipe_update_event* e) {
     if (!m_sActiveSwipe.pWorkspaceBegin)
         return;
-    updateWorkspaceSwipe(e->dx, e->dy);
+    const bool VERTANIMS = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
+        m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
+
+    const double delta = m_sActiveSwipe.delta + (VERTANIMS ? (*PSWIPEINVR ? -e->dy : e->dy) : (*PSWIPEINVR ? -e->dx : e->dx));
+    updateWorkspaceSwipe(delta);
 }
-void CInputManager::updateWorkspaceSwipe(double dx, double dy) {
+void CInputManager::updateWorkspaceSwipe(double delta) {
     static auto* const PSWIPEDIST             = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_distance")->intValue;
     static auto* const PSWIPEINVR             = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_invert")->intValue;
     static auto* const PSWIPENEW              = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_create_new")->intValue;
@@ -211,12 +215,10 @@ void CInputManager::updateWorkspaceSwipe(double dx, double dy) {
 
     const auto         XDISTANCE = m_sActiveSwipe.pMonitor->vecSize.x + *PWORKSPACEGAP;
     const auto         YDISTANCE = m_sActiveSwipe.pMonitor->vecSize.y + *PWORKSPACEGAP;
-    const bool         VERTANIMS = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
-        m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
+    const double       d         = m_sActiveSwipe.delta - delta;
+    m_sActiveSwipe.delta         = delta
 
-    m_sActiveSwipe.delta += VERTANIMS ? (*PSWIPEINVR ? -dy : dy) : (*PSWIPEINVR ? -dx : dx);
-
-    m_sActiveSwipe.avgSpeed = (m_sActiveSwipe.avgSpeed * m_sActiveSwipe.speedPoints + abs(dx)) / (m_sActiveSwipe.speedPoints + 1);
+                               m_sActiveSwipe.avgSpeed = (m_sActiveSwipe.avgSpeed * m_sActiveSwipe.speedPoints + abs(d)) / (m_sActiveSwipe.speedPoints + 1);
     m_sActiveSwipe.speedPoints++;
 
     std::string wsname           = "";
