@@ -3,6 +3,7 @@
 
 void CInputManager::onTouchDown(wlr_touch_down_event* e) {
     static auto* const PSWIPETOUCH = &g_pConfigManager->getConfigValuePtr("gestures:workspace_swipe_touch")->intValue;
+    static auto* const PGAPSOUT    = &g_pConfigManager->getConfigValuePtr("general:gaps_out")->intValue;
     EMIT_HOOK_EVENT_CANCELLABLE("touchDown", e);
 
     auto       PMONITOR = g_pCompositor->getMonitorFromName(e->touch->output_name ? e->touch->output_name : "");
@@ -29,8 +30,15 @@ void CInputManager::onTouchDown(wlr_touch_down_event* e) {
         // TODO: make this based on general:gaps_out instead of hard-coded
         //const auto x = e->x * PMONITOR->vecSize.x;
         //const auto y = e->y * PMONITOR->vecSize.y;
-        if (e->x < 0.01 || e->x > 0.99 || e->y < 0.01 || e->y > 0.99) {
+        // TODO: support vertical as well...
+        if (e->x < 0.05 || e->x > 0.95) {
             beginWorkspaceSwipe();
+            // Set the initial direction based on which edge you started from
+            if (e->x > 0.5) {
+                m_sActiveSwipe.initialDirection = -1;
+            } else {
+                m_sActiveSwipe.initialDirection = 1;
+            }
             return;
         }
     }
@@ -79,9 +87,17 @@ void CInputManager::onTouchUp(wlr_touch_up_event* e) {
 
 void CInputManager::onTouchMove(wlr_touch_motion_event* e) {
     EMIT_HOOK_EVENT_CANCELLABLE("touchMove", e);
+    const bool VERTANIMS = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
+        m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
     if (m_sActiveSwipe.pWorkspaceBegin) {
         // Handle the workspace swipe if there is one
-        updateWorkspaceSwipe(e->x - m_sActiveSwipe.delta, e->y - m_sActiveSwipe.delta);
+        // TODO: support PSWIPEINVR
+        if (m_sActiveSwipe.initialDirection == -1)
+            // go from 0 to -1
+            updateWorkspaceSwipe((VERTANIMS ? e->x : e->y) - 1);
+        else
+            // go from 0 to 1
+            updateWorkspaceSwipe(VERTANIMS ? e->x : e->y);
         return;
     }
     if (m_sTouchData.touchFocusWindow && g_pCompositor->windowValidMapped(m_sTouchData.touchFocusWindow)) {
