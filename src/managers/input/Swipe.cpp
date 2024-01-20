@@ -215,6 +215,7 @@ void CInputManager::updateWorkspaceSwipe(double delta) {
     const bool         VERTANIMS              = m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle == "slidevert" ||
         m_sActiveSwipe.pWorkspaceBegin->m_vRenderOffset.getConfig()->pValues->internalStyle.starts_with("slidefadevert");
 
+    printf("updateWorkspaceSwipe(%f); initial_direction = %d\n", delta, m_sActiveSwipe.initialDirection);
     const auto   XDISTANCE = m_sActiveSwipe.pMonitor->vecSize.x + *PWORKSPACEGAP;
     const auto   YDISTANCE = m_sActiveSwipe.pMonitor->vecSize.y + *PWORKSPACEGAP;
     const double d         = m_sActiveSwipe.delta - delta;
